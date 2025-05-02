@@ -117,9 +117,16 @@ async function getAllRecords() {
     const allRecords = [];
     let start = 0;
     const count = 200; // Maximum number of records per request
+    const recordIsNotDeleted = 'isDeleted:0';
+    const recordIsNotArchived = '!status:Archive';
+    const recordIsNotUpdated = '!customText26:yes';
+    const TestCandidate = 'customText37:yes';
+    const AND = '%20AND%20';
+
+
 
     while (true) {
-      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=isDeleted:0%20AND%20!status:Archive%20AND%20!customText26:Yes&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=${start}&count=${count}`;
+      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotUpdated}${AND}${TestCandidate}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=${start}&count=${count}`;
       console.log(`Fetching records starting from index ${start}...`);
 
       const response = await axios.get(url);
