@@ -60,13 +60,13 @@ async function getAllRecords() {
     const recordIsNotDeleted = 'isDeleted:0';
     const recordIsNotArchived = '!status:Archive';
     const recordIsNotUpdated = '!customText26:yes';
-    const TestCandidate = 'customText37:yes';
+    const recordIsNotProcessing = '!customText26:yes';
     const AND = '%20AND%20';
-
-
+    const OR = '%20OR%20';
+    const recordOwner = 'owner.id:1';
 
     while (true) {
-      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotUpdated}${AND}${TestCandidate}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=${start}&count=${count}`;
+      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotUpdated}${OR}${recordIsNotProcessing}${AND}${recordOwner}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=${start}&count=${count}`;
       console.log(`Fetching records starting from index ${start}...`);
 
       const response = await axios.get(url);
