@@ -184,16 +184,16 @@ async function updateRecord(candidateId, customObjectId, date1, date2) {
     }; 
     console.log(`Payload to update Candidate ${candidateId}, CustomObject ${customObjectId}:`, payload);
     
-    // try {
-    //   await axios.post(url, payload, { 
-    //     headers: {  
-    //       'Content-Type': 'application/json' 
-    //     } 
-    //   });
-    //   console.log(`Successfully updated CustomObject ${customObjectId} for Candidate ${candidateId}`);
-    // } catch (error) {
-    //   console.error(`Error updating CustomObject ${customObjectId} for Candidate ${candidateId}:`, error.response?.data || error.message);
-    // }
+    try {
+      await axios.post(url, payload, {
+        headers: {  
+          'Content-Type': 'application/json'
+        }
+      });
+      console.log(`Successfully updated CustomObject ${customObjectId} for Candidate ${candidateId}`);
+    } catch (error) {
+      console.error(`Error updating CustomObject ${customObjectId} for Candidate ${candidateId}:`, error.response?.data || error.message);
+    }
   }); 
 }
 
