@@ -2,74 +2,14 @@
 
 require('dotenv').config(); // Load environment variables from .env file
 const { setupLogging } = require('./logging');
+const { renewAccessToken, getBhRestToken } = require('./auth');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const clientId = process.env.CLIENT_ID;
-const clientSecret = process.env.CLIENT_SECRET;
 const corpToken = process.env.CORP_TOKEN;
 
 let accessToken = '';
 let refreshToken = process.env.REFRESH_TOKEN;
 let BhRestToken = process.env.BH_REST_TOKEN;
 
-//Function to refresh access token
-async function renewAccessToken(refreshToken) {
-  const url = `https://auth-emea.bullhornstaffing.com/oauth/token?grant_type=refresh_token&refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}`;
-  try {
-    const response = await axios.post(url);
-    console.log('Access token renewed:', response.data);
-
-    // Update the .env file with the new tokens
-    updateEnvFile({
-      REFRESH_TOKEN: response.data.refresh_token,
-      ACCESS_TOKEN: response.data.access_token,
-    });
-
-    return response.data; // Contains access_token and refresh_token
-  } catch (error) {
-    console.error('Error renewing access token:', error.response?.data || error.message);
-    throw error;
-  }
-}
-
-// Function to get BhRestToken using access token
-async function getBhRestToken(accessToken) {
-  const url = `https://rest-emea.bullhornstaffing.com/rest-services/login?version=2.0&access_token=${accessToken}`;
-  try {
-    const response = await axios.get(url);
-    console.log('BhRestToken retrieved:', response.data);
-
-    // Update the .env file with the new BhRestToken
-    updateEnvFile({
-      BH_REST_TOKEN: response.data.BhRestToken,
-    });
-
-    return response.data; // Contains BhRestToken and restUrl
-  } catch (error) {
-    console.error('Error retrieving BhRestToken:', error.response?.data || error.message);
-    throw error;
-  }
-}
-
-// Function to update the .env file with new tokens
-function updateEnvFile(newValues) {
-  const envPath = path.resolve(__dirname, '.env');
-  const envVars = fs.readFileSync(envPath, 'utf8').split('\n');
-
-  // Update the relevant variables
-  const updatedEnvVars = envVars.map(line => {
-    const [key, value] = line.split('=');
-    if (newValues[key]) {
-      return `${key}=${newValues[key]}`;
-    }
-    return line;
-  });
-
-  // Write the updated variables back to the .env file
-  fs.writeFileSync(envPath, updatedEnvVars.join('\n'), 'utf8');
-  console.log('.env file updated with new tokens.');
-}
 
 // API caller wrapper for expired token handling
 let consecutive401Errors = 0; // Global counter for consecutive 401 errors, protects against logs filling when all tokens are expired
@@ -182,15 +122,14 @@ async function updateRecord(candidateId, customObjectId, date1, date2) {
       }],
       "customText26": "Processing" // Mark the candidate as processed
     }; 
-    console.log(`Payload to update Candidate ${candidateId}, CustomObject ${customObjectId}:`, payload);
-    
+
     try {
       await axios.post(url, payload, {
         headers: {  
           'Content-Type': 'application/json'
         }
       });
-      console.log(`Successfully updated CustomObject ${customObjectId} for Candidate ${candidateId}`);
+      console.log(`Successfully updated CustomObject ${customObjectId} for Candidate ${candidateId}. Payload: `, payload);
     } catch (error) {
       console.error(`Error updating CustomObject ${customObjectId} for Candidate ${candidateId}:`, error.response?.data || error.message);
     }
@@ -221,9 +160,6 @@ async function swapDates() {
 
             try {
               await updateRecord(candidateId, customObjectId, date1, date2);
-              console.log(
-                `Updated customObject ${customObjectId} for Candidate ${candidateId}: Date1=${date2}, Date2=${date1}`
-              );
             } catch (updateError) {
               console.error(
                 `Error updating customObject ${customObjectId} for Candidate ${candidateId}:`,
