@@ -180,7 +180,7 @@ async function updateRecord(candidateId, customObjectId, date1, date2) {
       "date1": date2, 
       "date2": date1
       }],
-      "customText26": "Yes" // Mark the candidate as processed
+      "customText26": "Processing" // Mark the candidate as processed
     }; 
     console.log(`Payload to update Candidate ${candidateId}, CustomObject ${customObjectId}:`, payload);
     
@@ -203,7 +203,6 @@ async function swapDates() {
     const records = await getAllRecords();
     for (const record of records) {
       const candidateId = record.id; // Extract the candidate ID
-      let hasUpdated = false; // Track if any updates were made for this candidate
 
       try {
         const customObjects = await getAllCustomObjects(candidateId); // Fetch all customObject1s for this candidate
@@ -222,7 +221,6 @@ async function swapDates() {
 
             try {
               await updateRecord(candidateId, customObjectId, date1, date2);
-              hasUpdated = true; // Mark that an update was made
               console.log(
                 `Updated customObject ${customObjectId} for Candidate ${candidateId}: Date1=${date2}, Date2=${date1}`
               );
@@ -237,27 +235,25 @@ async function swapDates() {
           console.log(`Candidate ${candidateId} has no customObject1s data.`);
         }
 
-        // If no updates were made, update customText26 to "Yes" for the candidate
-        if (!hasUpdated) {
-          try {
-            const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}?BhRestToken=${BhRestToken}`;
-            const payload = {
-              customText26: "Yes",
-            };
-            await axios.post(url, payload, {
-              headers: {
-                "Content-Type": "application/json",
-              },
-            });
-            console.log(
-              `Updated customText26 to "Yes" for Candidate ${candidateId} with no eligible customObject1s.`
-            );
-          } catch (updateError) {
-            console.error(
-              `Error updating customText26 for Candidate ${candidateId}:`,
-              updateError.response?.data || updateError.message
-            );
-          }
+        // After processing all customObject1s, update customText26 to "Yes"
+        try {
+          const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}?BhRestToken=${BhRestToken}`;
+          const payload = {
+            customText26: "Yes",
+          };
+          await axios.post(url, payload, {
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          console.log(
+            `Updated customText26 to "Yes" for Candidate ${candidateId} after processing all customObject1s.`
+          );
+        } catch (updateError) {
+          console.error(
+            `Error updating customText26 for Candidate ${candidateId}:`,
+            updateError.response?.data || updateError.message
+          );
         }
       } catch (customObjectError) {
         console.error(
