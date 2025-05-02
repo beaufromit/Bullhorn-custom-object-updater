@@ -26,7 +26,7 @@ async function makeApiCall(apiCallFunction, ...args) {
 
       if (consecutive401Errors >= 3) {
         console.error('Too many consecutive 401 errors. Stopping the script.');
-        throw new Error('Too many consecutive 401 errors.');
+        process.exit(1); // Exit the script if too many consecutive 401 errors occur
       }
 
       try {
