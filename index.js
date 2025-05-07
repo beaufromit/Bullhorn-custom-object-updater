@@ -155,8 +155,8 @@ async function updateRecord(candidateId, customObjectId, date1, date2) {
 //Function to coordinate getAllRecords, getAllCustomObjects and updateRecord
 async function swapDates() {
   try {
-    const records = await getAllRecords();
-    for (const record of records) {
+    const { allRecords } = await getAllRecords();
+    for (const record of allRecords) {
       const candidateId = record.id; // Extract the candidate ID
 
       try {
