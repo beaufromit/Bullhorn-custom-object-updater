@@ -57,7 +57,7 @@ function getQueryConstants() {
     recordIsNotArchived: '!status:Archive',
     recordIsNotUpdated: '!customText26:yes',
     recordIsNotProcessing: '!customText26:processing',
-    recordOwner: 'owner.id:142235',
+    recordOwner: 'owner.id:15',
     AND: '%20AND%20',
     OR: '%20OR%20',
   };
@@ -84,6 +84,10 @@ async function getAllRecords() {
       const response = await axios.get(url);
       const records = response.data.data;
 
+      if (start === 0) {
+        total = response.data.total; // Extract total count from the first response
+      }
+
       if (records && records.length > 0) {
         allRecords.push(...records);
         start += records.length; // Move to the next batch
@@ -92,7 +96,7 @@ async function getAllRecords() {
       }
     }
 
-    return allRecords;
+    return { total, allRecords }; // Return total count and all records
   });
 }
  
@@ -250,6 +254,10 @@ async function confirmToContinue() {
 
   console.log("Full query string being used:");
   console.log(fullQuery);
+
+   // Fetch total count of candidates
+  const { total } = await getAllRecords();
+  console.log(`Total number of candidates found: ${total}`);
 
   // Wait for user confirmation
   await confirmToContinue();
