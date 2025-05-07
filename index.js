@@ -153,7 +153,12 @@ async function swapDates() {
     const { allRecords } = await getAllRecords();
     console.log(`Processing ${allRecords.length} candidates...`);
 
+    let processedCount = 0; // Initialize the progress counter
+
     for (const record of allRecords) {
+      processedCount++; // Increment the counter for each candidate
+      console.log(`Processing candidate ${processedCount} of ${allRecords.length}...`);
+      
       const candidateId = record.id; // Extract the candidate ID
 
       const customObjects = await getAllCustomObjects(candidateId); // Fetch all customObject1s for this candidate
