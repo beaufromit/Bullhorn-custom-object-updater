@@ -57,7 +57,7 @@ function getQueryConstants() {
     recordIsNotArchived: '!status:Archive',
     recordIsNotUpdated: '!customText26:yes',
     recordIsNotProcessing: '!customText26:processing',
-    recordOwner: 'owner.id:15',
+    recordOwner: 'owner.id:142235',
     AND: '%20AND%20',
     OR: '%20OR%20',
   };
@@ -139,16 +139,11 @@ async function updateRecord(candidateId, customObjectId, date1, date2) {
       "customText26": "Processing" // Mark the candidate as processed
     }; 
 
-    try {
-      await axios.post(url, payload, {
-        headers: {  
-          'Content-Type': 'application/json'
-        }
-      });
-      console.log(`Successfully updated CustomObject ${customObjectId} for Candidate ${candidateId}. Payload: `, payload);
-    } catch (error) {
-      console.error(`Error updating CustomObject ${customObjectId} for Candidate ${candidateId}:`, error.response?.data || error.message);
-    }
+    await axios.post(url, payload, {
+      headers: {  
+        'Content-Type': 'application/json'        }
+    });
+    console.log(`Successfully updated CustomObject ${customObjectId} for Candidate ${candidateId}. Payload: `, payload);
   }); 
 }
 
@@ -156,67 +151,49 @@ async function updateRecord(candidateId, customObjectId, date1, date2) {
 async function swapDates() {
   try {
     const { allRecords } = await getAllRecords();
+    console.log(`Processing ${allRecords.length} candidates...`);
+
     for (const record of allRecords) {
       const candidateId = record.id; // Extract the candidate ID
 
-      try {
-        const customObjects = await getAllCustomObjects(candidateId); // Fetch all customObject1s for this candidate
+      const customObjects = await getAllCustomObjects(candidateId); // Fetch all customObject1s for this candidate
 
-        if (customObjects && customObjects.length > 0) {
-          for (const customObject of customObjects) {
-            const { id: customObjectId, date1, date2, text3 } = customObject;
+      if (customObjects && customObjects.length > 0) {
+        for (const customObject of customObjects) {
+          const { id: customObjectId, date1, date2, text3 } = customObject;
 
-            // Skip the update if text3 is 'Herefish'
-            if (text3 === 'Herefish') {
-              console.log(
-                `Skipping update for customObject ${customObjectId} of Candidate ${candidateId} because text3 is 'Herefish'.`
-              );
-              continue;
-            }
-
-            try {
-              await updateRecord(candidateId, customObjectId, date1, date2);
-            } catch (updateError) {
-              console.error(
-                `Error updating customObject ${customObjectId} for Candidate ${candidateId}:`,
-                updateError.response?.data || updateError.message
-              );
-            }
+          // Skip the update if text3 is 'Herefish'
+          if (text3 === 'Herefish') {
+            console.log(
+              `Skipping update for customObject ${customObjectId} of Candidate ${candidateId} because text3 is 'Herefish'.`
+            );
+            continue;
           }
-        } else {
-          console.log(`Candidate ${candidateId} has no customObject1s data.`);
-        }
 
-        // After processing all customObject1s, update customText26 to "Yes"
-        try {
-          const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}?BhRestToken=${BhRestToken}`;
-          const payload = {
-            customText26: "Yes",
-          };
-          await axios.post(url, payload, {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          });
-          console.log(
-            `Updated customText26 to "Yes" for Candidate ${candidateId} after processing all customObject1s.`
-          );
-        } catch (updateError) {
-          console.error(
-            `Error updating customText26 for Candidate ${candidateId}:`,
-            updateError.response?.data || updateError.message
-          );
+          await updateRecord(candidateId, customObjectId, date1, date2);
         }
-      } catch (customObjectError) {
-        console.error(
-          `Error fetching customObject1s for Candidate ${candidateId}:`,
-          customObjectError.message
-        );
+      } else {
+        console.log(`Candidate ${candidateId} has no customObject1s data.`);
       }
+
+      // After processing all customObject1s, update customText26 to "Yes"
+      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}?BhRestToken=${BhRestToken}`;
+      const payload = {
+        customText26: "Yes",
+      };
+      await axios.post(url, payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log(
+        `Updated customText26 to "Yes" for Candidate ${candidateId} after processing all customObject1s.`
+      );
     }
+
     console.log("All records updated successfully.");
   } catch (error) {
-    console.error("Error updating records:", error.message);
+    console.error("Error updating records:", error.response?.data || error.message);
   }
 }
 
