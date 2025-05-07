@@ -10,6 +10,13 @@ let accessToken = '';
 let refreshToken = process.env.REFRESH_TOKEN;
 let BhRestToken = process.env.BH_REST_TOKEN;
 
+let shouldStop = false;
+
+process.on('SIGINT', () => {
+  console.log('\nGracefully stopping the script. It will finish the current record and then exit.');
+  shouldStop = true; // Set the flag to stop the script
+});
+
 // API caller wrapper for expired token handling
 let consecutive401Errors = 0; // Global counter for consecutive 401 errors, protects against logs filling when all tokens are expired
 async function makeApiCall(apiCallFunction, ...args) {
@@ -156,9 +163,13 @@ async function swapDates() {
     let processedCount = 0; // Initialize the progress counter
 
     for (const record of allRecords) {
+      if (shouldStop) {
+        console.log('Stopping script after finishing the current record.');
+        break; // Exit the loop if the stop flag is set
+      }
       processedCount++; // Increment the counter for each candidate
       console.log(`Processing candidate ${processedCount} of ${allRecords.length}...`);
-      
+
       const candidateId = record.id; // Extract the candidate ID
 
       const customObjects = await getAllCustomObjects(candidateId); // Fetch all customObject1s for this candidate
