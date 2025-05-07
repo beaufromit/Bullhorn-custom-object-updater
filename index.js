@@ -57,12 +57,17 @@ function getQueryConstants() {
     recordIsNotArchived: '!status:Archive',
     recordIsNotUpdated: '!customText26:yes',
     recordIsNotProcessing: '!customText26:processing',
-    recordOwner: 'owner.id:14',
+    recordOwner: 'owner.id:142235',
     AND: '%20AND%20',
     OR: '%20OR%20',
   };
 }
 
+// Helper function to build the query string - change string here if necessary
+function buildQueryString() {
+  const { recordIsNotDeleted, recordIsNotArchived, recordIsNotUpdated, recordIsNotProcessing, recordOwner, AND, OR } = getQueryConstants();
+  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotUpdated}${OR}${recordIsNotProcessing}${AND}${recordOwner}`;
+}
 
 // Function to fetch all records 
 async function getAllRecords() {
@@ -70,10 +75,10 @@ async function getAllRecords() {
     const allRecords = [];
     let start = 0;
     const count = 200; // Maximum number of records per request
-    const { recordIsNotDeleted, recordIsNotArchived, recordIsNotUpdated, recordIsNotProcessing, recordOwner, AND, OR } = getQueryConstants();
+    const queryString = buildQueryString();
 
     while (true) {
-      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotUpdated}${OR}${recordIsNotProcessing}${AND}${recordOwner}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=${start}&count=${count}`;
+      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=${queryString}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=${start}&count=${count}`;
       console.log(`Fetching records starting from index ${start}...`);
 
       const response = await axios.get(url);
@@ -238,6 +243,13 @@ async function confirmToContinue() {
 (async () => {
   console.log("Constants used in the 'get all candidates' query:");
   console.log(getQueryConstants());
+
+  // Construct the full query string dynamically
+  const queryString = buildQueryString();
+  const fullUrl = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=<BhRestToken>&query=${queryString}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=0&count=200`;
+
+  console.log("Full URL query being used:");
+  console.log(fullUrl);
 
   // Wait for user confirmation
   await confirmToContinue();
