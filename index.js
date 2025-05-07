@@ -246,10 +246,10 @@ async function confirmToContinue() {
 
   // Construct the full query string dynamically
   const queryString = buildQueryString();
-  const fullUrl = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=<BhRestToken>&query=${queryString}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=0&count=200`;
+  const fullQuery = `${queryString}`;
 
-  console.log("Full URL query being used:");
-  console.log(fullUrl);
+  console.log("Full query string being used:");
+  console.log(fullQuery);
 
   // Wait for user confirmation
   await confirmToContinue();
