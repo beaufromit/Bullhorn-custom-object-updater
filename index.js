@@ -10,7 +10,6 @@ let accessToken = '';
 let refreshToken = process.env.REFRESH_TOKEN;
 let BhRestToken = process.env.BH_REST_TOKEN;
 
-
 // API caller wrapper for expired token handling
 let consecutive401Errors = 0; // Global counter for consecutive 401 errors, protects against logs filling when all tokens are expired
 async function makeApiCall(apiCallFunction, ...args) {
@@ -51,19 +50,27 @@ async function makeApiCall(apiCallFunction, ...args) {
   }
 }
 
+// Function to return query constants
+function getQueryConstants() {
+  return {
+    recordIsNotDeleted: 'isDeleted:0',
+    recordIsNotArchived: '!status:Archive',
+    recordIsNotUpdated: '!customText26:yes',
+    recordIsNotProcessing: '!customText26:processing',
+    recordOwner: 'owner.id:14',
+    AND: '%20AND%20',
+    OR: '%20OR%20',
+  };
+}
+
+
 // Function to fetch all records 
 async function getAllRecords() {
   return await makeApiCall(async () => {
     const allRecords = [];
     let start = 0;
     const count = 200; // Maximum number of records per request
-    const recordIsNotDeleted = 'isDeleted:0';
-    const recordIsNotArchived = '!status:Archive';
-    const recordIsNotUpdated = '!customText26:yes';
-    const recordIsNotProcessing = '!customText26:processing';
-    const AND = '%20AND%20';
-    const OR = '%20OR%20';
-    const recordOwner = 'owner.id:2';
+    const { recordIsNotDeleted, recordIsNotArchived, recordIsNotUpdated, recordIsNotProcessing, recordOwner, AND, OR } = getQueryConstants();
 
     while (true) {
       const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotUpdated}${OR}${recordIsNotProcessing}${AND}${recordOwner}&fields=id,customObject1s(id,date1,date2,text3)&sort=id&start=${start}&count=${count}`;
@@ -204,8 +211,40 @@ async function swapDates() {
   }
 }
 
-//Logging output to file
-setupLogging();
 
-// Run the main function 
-swapDates();
+const readline = require('readline');
+
+// Function to prompt for confirmation
+async function confirmToContinue() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question('Do you want to continue? (y/n): ', (answer) => {
+      rl.close();
+      if (answer.toLowerCase() === 'y') {
+        resolve(true);
+      } else {
+        console.log('Exiting script.');
+        process.exit(0); // Exit the script if the user does not confirm
+      }
+    });
+  });
+}
+
+// Main script
+(async () => {
+  console.log("Constants used in the 'get all candidates' query:");
+  console.log(getQueryConstants());
+
+  // Wait for user confirmation
+  await confirmToContinue();
+
+  // Logging output to file
+  setupLogging();
+
+  // Run the main function
+  swapDates();
+})();
