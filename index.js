@@ -20,39 +20,62 @@ process.on('SIGINT', () => {
 // API caller wrapper for expired token handling
 let consecutive401Errors = 0; // Global counter for consecutive 401 errors, protects against logs filling when all tokens are expired
 async function makeApiCall(apiCallFunction, ...args) {
-  try {
-    const result = await apiCallFunction(...args);
-    consecutive401Errors = 0; // Reset the counter on a successful call
-    return result;
-  } catch (error) {
-    // Check if the error is due to an expired BhRestToken
-    if (error.response?.status === 401 || error.response?.data?.error === 'invalid_token') {
-      console.log('Token expired. Renewing tokens...');
-      consecutive401Errors++; // Increment the counter for 401 errors
+  const maxRetries = 3; // Maximum number of retries for transient errors
+  let attempt = 0;
 
-      if (consecutive401Errors >= 3) {
-        console.error('Too many consecutive 401 errors. Stopping the script.');
-        process.exit(1); // Exit the script if too many consecutive 401 errors occur
+  while (attempt < maxRetries) {
+    try {
+      const result = await apiCallFunction(...args);
+      consecutive401Errors = 0; // Reset the counter on a successful call
+      return result;
+    } catch (error) {
+      attempt++;
+
+      // Handle specific error types
+      if (error.code === 'ETIMEDOUT') {
+        console.warn(`Timeout error occurred. Retrying (${attempt}/${maxRetries})...`);
+      } else if (error.code === 'EAI_AGAIN') {
+        console.warn(`DNS resolution error occurred. Retrying (${attempt}/${maxRetries})...`);
+      } else if (error.code === 'ECONNRESET') {
+        console.warn(`Connection reset error occurred. Retrying (${attempt}/${maxRetries})...`);
+      } else if (error.response?.status === 401 || error.response?.data?.error === 'invalid_token') {
+        console.log('Token expired. Renewing tokens...');
+        consecutive401Errors++;
+
+        if (consecutive401Errors >= 3) {
+          console.error('Too many consecutive 401 errors. Stopping the script.');
+          process.exit(1); // Exit the script if too many consecutive 401 errors occur
+        }
+
+        try {
+          // Renew tokens
+          const tokenData = await renewAccessToken(refreshToken);
+          const bhRestData = await getBhRestToken(tokenData.access_token);
+
+          // Update global tokens
+          accessToken = tokenData.access_token;
+          refreshToken = tokenData.refresh_token;
+          BhRestToken = bhRestData.BhRestToken;
+
+          console.log('Tokens renewed successfully.');
+          continue; // Retry the original request
+        } catch (tokenError) {
+          console.error('Failed to renew tokens:', tokenError.message);
+          throw tokenError; // Re-throw if token renewal fails
+        }
+      } else {
+        console.error(`Unhandled error occurred: ${error.message}`);
+        throw error; // Re-throw unhandled errors
       }
 
-      try {
-        // Renew the access token and BhRestToken
-        const tokenData = await renewAccessToken(refreshToken);
-        const bhRestData = await getBhRestToken(tokenData.access_token);
-
-        // Update global tokens
-        accessToken = tokenData.access_token;
-        refreshToken = tokenData.refresh_token;
-        BhRestToken = bhRestData.BhRestToken;
-
-        console.log('Retrying the failed request...');
-        return await apiCallFunction(...args); // Retry the failed request
-      } catch (tokenError) {
-        console.error('Error renewing tokens:', tokenError.response?.data || tokenError.message);
-        throw tokenError; // Re-throw if token renewal fails
+      // If max retries are reached, log and re-throw the error
+      if (attempt >= maxRetries) {
+        console.error(`Max retries reached for error: ${error.message}`);
+        throw error;
       }
-    } else {
-      throw error; // Re-throw other errors
+
+      // Add a delay before retrying (exponential backoff)
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
 }
