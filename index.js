@@ -20,14 +20,6 @@ process.on('SIGINT', () => {
   shouldStop = true; // Set the flag to stop the script
 });
 
-
-
-
-
-
-
- 
-
 // Function to update a record 
 async function updateRecord(candidateId, customObjectId, date1, date2) {
   return await makeApiCall(async () => {

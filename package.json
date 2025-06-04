@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "swap-dates": "node index.js"
+    "swap-dates": "node index.js",
+    "add-legitimate-interest": "node addLegitimateInterest.js"
   },
   "keywords": [],
   "author": "",
