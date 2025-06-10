@@ -3,6 +3,77 @@ const clientSecret = process.env.CLIENT_SECRET;
 const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const url = require('url');
+
+//Get new access token using credenials when refresh token fails
+async function getAuthorizationCodeWithCredentials() {
+  const clientId = process.env.CLIENT_ID;
+  const username = process.env.BH_USERNAME;
+  const password = process.env.BH_PASSWORD;
+
+  const authUrl = `https://auth.bullhornstaffing.com/oauth/authorize?client_id=${encodeURIComponent(clientId)}&response_type=code&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}&action=Login`;
+
+  console.log('Authorization URL:', authUrl);
+  try {
+    const response = await axios.get(authUrl, {
+      maxRedirects: 0,
+      validateStatus: (status) => status === 302
+    });
+
+    const location = response.headers.location;
+    if (location) {
+      const parsed = url.parse(location, true);
+      const code = parsed.query.code;
+      if (code) {
+        console.log('Authorization code obtained:', code);
+        return code;
+      }
+    }
+    throw new Error('Authorization code not found in redirect URL.');
+  } catch (error) {
+    if (error.response && error.response.status === 302) {
+      const location = error.response.headers.location;
+      const parsed = url.parse(location, true);
+      const code = parsed.query.code;
+      if (code) {
+        console.log('Authorization code obtained:', code);
+        return code;
+      }
+      throw new Error('Authorization code not found in redirect URL.');
+    }
+    throw error;
+  }
+}
+
+//Exchange code for tokens
+async function exchangeCodeForTokens(code) {
+  const clientId = process.env.CLIENT_ID;
+  const clientSecret = process.env.CLIENT_SECRET;
+  
+  const url = 'https://auth.bullhornstaffing.com/oauth/token';
+  const params = new URLSearchParams();
+  params.append('grant_type', 'authorization_code');
+  params.append('code', code);
+  params.append('client_id', clientId);
+  params.append('client_secret', clientSecret);
+
+  try {
+    const response = await axios.post(url, params);
+    console.log('Tokens obtained:', response.data);
+
+    // Optionally update .env here
+    updateEnvFile({
+      REFRESH_TOKEN: response.data.refresh_token,
+      ACCESS_TOKEN: response.data.access_token,
+    });
+
+    return response.data; // Contains access_token and refresh_token
+  } catch (error) {
+    console.error('Error exchanging code for tokens:', error.response?.data || error.message);
+    throw error;
+  }
+}
+
 //Function to refresh access token
 async function renewAccessToken(refreshToken) {
   const url = `https://auth-emea.bullhornstaffing.com/oauth/token?grant_type=refresh_token&refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}`;
@@ -42,6 +113,21 @@ async function getBhRestToken(accessToken) {
   }
 }
 
+//recover login from start of flow
+async function recoverTokensAndRestToken() {
+  // 1. Get new authorization code
+  const code = await getAuthorizationCodeWithCredentials();
+
+  // 2. Exchange code for tokens
+  const tokens = await exchangeCodeForTokens(code);
+
+  // 3. Get BhRestToken using new access token
+  const bhRest = await getBhRestToken(tokens.access_token);
+
+  // .env will be updated with new tokens and BhRestToken
+  return bhRest;
+}
+
 // Function to update the .env file with new tokens
 function updateEnvFile(newValues) {
   const envPath = path.resolve(__dirname, '.env');
@@ -62,6 +148,10 @@ function updateEnvFile(newValues) {
 }
 
 module.exports = {
+    recoverTokensAndRestToken,
+    exchangeCodeForTokens,
+    getAuthorizationCodeWithCredentials,
+    exchangeCodeForTokens,
     renewAccessToken,
     getBhRestToken,
   };
