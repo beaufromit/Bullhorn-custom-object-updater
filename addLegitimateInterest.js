@@ -7,6 +7,7 @@ const {
   getAllCustomObjects,
   corpToken,
   getBhRestToken,
+  confirmToContinue,
 } = require('./utils');
 const { setupLogging } = require('./logging');
 const axios = require('axios');

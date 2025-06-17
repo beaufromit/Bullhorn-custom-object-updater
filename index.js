@@ -9,6 +9,7 @@ const {
   getAllCustomObjects,
   corpToken,
   getBhRestToken,
+  confirmToContinue
 } = require('./utils');
 const { setupLogging } = require('./logging');
 const axios = require('axios');
@@ -111,25 +112,6 @@ async function swapDates() {
 
 const readline = require('readline');
 
-// Function to prompt for confirmation
-async function confirmToContinue() {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-
-  return new Promise((resolve) => {
-    rl.question('Do you want to continue? (y/n): ', (answer) => {
-      rl.close();
-      if (answer.toLowerCase() === 'y') {
-        resolve(true);
-      } else {
-        console.log('Exiting script.');
-        process.exit(0); // Exit the script if the user does not confirm
-      }
-    });
-  });
-}
 
 // Main script
 (async () => {

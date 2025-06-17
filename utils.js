@@ -2,6 +2,7 @@ require('dotenv').config(); // Load environment variables from .env file
 const axios = require('axios');
 const { renewAccessToken, getBhRestToken, recoverTokensAndRestToken, exchangeCodeForTokens,  } = require('./auth');
 const corpToken = process.env.CORP_TOKEN;
+const readline = require('readline');
 
 let accessToken = '';
 let refreshToken = process.env.REFRESH_TOKEN;
@@ -218,6 +219,26 @@ async function getAllFileAttachments(candidateId) {
   });
 }
 
+// Function to prompt for confirmation
+async function confirmToContinue() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  return new Promise((resolve) => {
+    rl.question('Do you want to continue? (y/n): ', (answer) => {
+      rl.close();
+      if (answer.toLowerCase() === 'y') {
+        resolve(true);
+      } else {
+        console.log('Exiting script.');
+        process.exit(0); // Exit the script if the user does not confirm
+      }
+    });
+  });
+}
+
 module.exports = {
   makeApiCall,
   getQueryConstants,
@@ -229,5 +250,6 @@ module.exports = {
   // If you need BhRestToken, export a getter function for it:
   getBhRestToken: () => BhRestToken,
   getAllCandidatesForCVUpdate,
-  getAllFileAttachments,  
+  getAllFileAttachments,
+  confirmToContinue,
 };

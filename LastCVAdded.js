@@ -1,6 +1,6 @@
 require('dotenv').config();
 const axios = require('axios');
-const { makeApiCall, getAllCandidatesForCVUpdate, getAllFileAttachments corpToken, getBhRestToken } = require('./utils');
+const { makeApiCall, getAllCandidatesForCVUpdate, getAllFileAttachments, corpToken, getBhRestToken } = require('./utils');
 
 // Update candidate's customDate2
 async function updateCandidateCustomDate2(candidateId, dateValue) {
