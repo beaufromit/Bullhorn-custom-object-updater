@@ -13,6 +13,13 @@ const {
 const { setupLogging } = require('./logging');
 const axios = require('axios');
 
+let shouldStop = false;
+
+process.on('SIGINT', () => {
+  console.log('\nGracefully stopping the script. It will finish the current record and then exit.');
+  shouldStop = true;
+});
+
 // Custom getAllRecords for this script
 async function getAllCandidatesForLegitimateInterest() {
   return await makeApiCall(async () => {
@@ -124,6 +131,10 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
 
   let processed = 0;
   for (const candidate of missing) {
+    if (shouldStop) {
+      console.log('Stopping script after finishing the current record.');
+      break;
+    }
     processed++;
     console.log(`Adding customObject1s for candidate ${candidate.id} (${processed} of ${missing.length})...`);
     try {
