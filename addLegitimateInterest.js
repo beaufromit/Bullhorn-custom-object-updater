@@ -8,6 +8,7 @@ const {
   corpToken,
   getBhRestToken,
   confirmToContinue,
+  getQueryConstants,
 } = require('./utils');
 const { setupLogging } = require('./logging');
 const axios = require('axios');
@@ -101,7 +102,24 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
 (async () => {
   setupLogging();
   console.log("Starting Legitimate Interest check...");
-  const missing = await findCandidatesMissingLegitimateInterest();
+
+  // 1. Show constants and query
+  console.log("Constants used in the 'get all candidates' query:");
+  console.log(getQueryConstants());
+
+  const queryString = buildLegitimateInterestQueryString();
+  console.log("Full query string being used:");
+  console.log(queryString);
+
+  // 2. Fetch candidates
+  const { allRecords } = await getAllCandidatesForLegitimateInterest();
+  console.log(`Total number of candidates found: ${allRecords.length}`);
+
+  // 3. Prompt for confirmation
+  await confirmToContinue();
+
+  // 4. Find missing and process
+  const missing = await findCandidatesMissingLegitimateInterest(allRecords);
   console.log(`Found ${missing.length} candidates missing 'Legitimate Interest' customObject1s.`);
 
   let processed = 0;
@@ -116,6 +134,3 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
   }
   console.log("All missing candidates processed.");
 })();
-
-// Setup logging to file and console
-setupLogging();
