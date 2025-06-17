@@ -239,6 +239,15 @@ async function confirmToContinue() {
   });
 }
 
+function setupGracefulStop() {
+  let shouldStop = false;
+  process.on('SIGINT', () => {
+    console.log('\nGracefully stopping the script. It will finish the current record and then exit.');
+    shouldStop = true;
+  });
+  return () => shouldStop;
+}
+
 module.exports = {
   makeApiCall,
   getQueryConstants,
@@ -252,4 +261,5 @@ module.exports = {
   getAllCandidatesForCVUpdate,
   getAllFileAttachments,
   confirmToContinue,
+  setupGracefulStop
 };

@@ -9,17 +9,12 @@ const {
   getAllCustomObjects,
   corpToken,
   getBhRestToken,
-  confirmToContinue
+  confirmToContinue,
+  setupGracefulStop
 } = require('./utils');
 const { setupLogging } = require('./logging');
 const axios = require('axios');
-
-let shouldStop = false;
-
-process.on('SIGINT', () => {
-  console.log('\nGracefully stopping the script. It will finish the current record and then exit.');
-  shouldStop = true; // Set the flag to stop the script
-});
+const getShouldStop = setupGracefulStop();
 
 // Function to update a record 
 async function updateRecord(candidateId, customObjectId, date1, date2) {
@@ -51,7 +46,7 @@ async function swapDates() {
     let processedCount = 0; // Initialize the progress counter
 
     for (const record of allRecords) {
-      if (shouldStop) {
+      if (getShouldStop()) {
         console.log('Stopping script after finishing the current record.');
         break; // Exit the loop if the stop flag is set
       }
@@ -108,10 +103,6 @@ async function swapDates() {
     console.error("Error updating records:", error.response?.data || error.message);
   }
 }
-
-
-const readline = require('readline');
-
 
 // Main script
 (async () => {

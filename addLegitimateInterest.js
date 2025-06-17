@@ -9,16 +9,11 @@ const {
   getBhRestToken,
   confirmToContinue,
   getQueryConstants,
+  setupGracefulStop
 } = require('./utils');
 const { setupLogging } = require('./logging');
 const axios = require('axios');
-
-let shouldStop = false;
-
-process.on('SIGINT', () => {
-  console.log('\nGracefully stopping the script. It will finish the current record and then exit.');
-  shouldStop = true;
-});
+const getShouldStop = setupGracefulStop();
 
 // Custom getAllRecords for this script
 async function getAllCandidatesForLegitimateInterest() {
@@ -134,7 +129,7 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
     let successCount = 0;
     let failCount = 0;
     for (const candidate of missing) {
-      if (shouldStop) {
+      if (getShouldStop()) {
         console.log('Stopping script after finishing the current record.');
         break;
       }
