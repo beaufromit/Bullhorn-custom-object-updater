@@ -130,6 +130,8 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
   console.log(`Found ${missing.length} candidates missing 'Legitimate Interest' customObject1s.`);
 
   let processed = 0;
+  let successCount = 0;
+  let failCount = 0;
   for (const candidate of missing) {
     if (shouldStop) {
       console.log('Stopping script after finishing the current record.');
@@ -139,9 +141,11 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
     console.log(`Adding customObject1s for candidate ${candidate.id} (${processed} of ${missing.length})...`);
     try {
       await addLegitimateInterestCustomObject(candidate.id, candidate.dateAdded);
+      successCount++;
     } catch (error) {
       console.error(`Failed to add customObject1s for candidate ${candidate.id}:`, error.response?.data || error.message);
+      failCount++;
     }
   }
-  console.log("All missing candidates processed.");
+  console.log(`${processed} missing candidates processed. Success: ${successCount}, Failed: ${failCount}`);
 })();
