@@ -111,7 +111,7 @@ function buildQueryString() {
 function buildLegitimateInterestQueryString() {
   // Example: fetch all candidates (customize as needed)
   // You may want to filter out deleted/archived, but NOT by customText26
-  const { recordIsNotDeleted, recordIsNotArchived, testCandidate, AND } = getQueryConstants();
+  const { recordIsNotDeleted, recordIsNotArchived, recordDateAdded, AND } = getQueryConstants();
   return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordDateAdded}` // Adjust the query as needed
 }
 
