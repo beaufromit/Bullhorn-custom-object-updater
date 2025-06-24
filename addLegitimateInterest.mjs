@@ -1,7 +1,8 @@
 //This script will add a legitimate interest item to all candidate records that are missing one. It will set the date recieved to the candidate date added.
 
-require('dotenv').config();
-const {
+import dotenv from 'dotenv';
+dotenv.config();
+import {
   makeApiCall,
   buildLegitimateInterestQueryString,
   getAllCustomObjects,
@@ -10,11 +11,13 @@ const {
   confirmToContinue,
   getQueryConstants,
   setupGracefulStop
-} = require('./utils');
-const { setupLogging } = require('./logging');
-const axios = require('axios');
+} from './utils.mjs';
+import { setupLogging } from'./logging.mjs';
+import axios from 'axios';
 const getShouldStop = setupGracefulStop();
-const chalk = require('chalk').default;
+import chalk from 'chalk';
+import pLimit from 'p-limit';
+const limit = pLimit(5); // Limit concurrent requests to 5
 
 // Custom getAllRecords for this script
 async function getAllCandidatesForLegitimateInterest() {
@@ -22,6 +25,7 @@ async function getAllCandidatesForLegitimateInterest() {
     const allRecords = [];
     let start = 0;
     const count = 200;
+    let total = 0;
     const queryString = buildLegitimateInterestQueryString();
 
     while (true) {
@@ -46,40 +50,73 @@ async function getAllCandidatesForLegitimateInterest() {
   });
 }
 
-// Function to find all candidates missing a customObject1s with text2 === 'Legitimate Interest'
-async function findCandidatesMissingLegitimateInterest() {
-  const { allRecords } = await getAllCandidatesForLegitimateInterest();
+async function findCandidatesMissingLegitimateInterest(allRecords, getShouldStop) {
   const candidatesMissing = [];
+  let processedCount = 0;
 
-   let processedCount = 0;
-  for (const candidate of allRecords) {
-    processedCount++;
-    console.log(`Checking candidate ${processedCount} of ${allRecords.length} (ID: ${candidate.id})...`);
+  // Create an array of limited async tasks
+  const tasks = allRecords.map(candidate =>
+    limit(async () => {
+      if (getShouldStop && getShouldStop()) return; // Optional: support graceful stop
 
-    const customObjects = await getAllCustomObjects(candidate.id); // Fetch all customObject1s for this candidate
+      processedCount++;
+      console.log(`Checking candidate ${processedCount} of ${allRecords.length} (ID: ${candidate.id})...`);
 
-    let hasLegitInterest = false;
-    if (customObjects && customObjects.length > 0) {
-      for (const customObject of customObjects) {
-        const { text2 } = customObject;
-        if (text2 && text2.trim().toLowerCase() === 'legitimate interest') {
-          hasLegitInterest = true;
-          break;
-        }
+      const customObjects = await getAllCustomObjects(candidate.id);
+
+      const hasLegitInterest = customObjects.some(
+        obj => obj.text2 && obj.text2.trim().toLowerCase() === 'legitimate interest'
+      );
+
+      if (!hasLegitInterest) {
+        candidatesMissing.push({
+          id: candidate.id,
+          dateAdded: candidate.dateAdded,
+        });
+        console.log(`Candidate ${candidate.id} is missing 'Legitimate Interest' customObject1s.`);
       }
-    }
+    })
+  );
 
-    if (!hasLegitInterest) {
-      candidatesMissing.push({
-        id: candidate.id,
-        dateAdded: candidate.dateAdded,
-      });
-      console.log(`Candidate ${candidate.id} is missing 'Legitimate Interest' customObject1s.`);
-    }
-  }
+  await Promise.all(tasks);
 
   return candidatesMissing;
 }
+
+// // Function to find all candidates missing a customObject1s with text2 === 'Legitimate Interest'
+// async function findCandidatesMissingLegitimateInterest() {
+//   const { allRecords } = await getAllCandidatesForLegitimateInterest();
+//   const candidatesMissing = [];
+
+//    let processedCount = 0;
+//   for (const candidate of allRecords) {
+//     processedCount++;
+//     console.log(`Checking candidate ${processedCount} of ${allRecords.length} (ID: ${candidate.id})...`);
+
+//     const customObjects = await getAllCustomObjects(candidate.id); // Fetch all customObject1s for this candidate
+
+//     let hasLegitInterest = false;
+//     if (customObjects && customObjects.length > 0) {
+//       for (const customObject of customObjects) {
+//         const { text2 } = customObject;
+//         if (text2 && text2.trim().toLowerCase() === 'legitimate interest') {
+//           hasLegitInterest = true;
+//           break;
+//         }
+//       }
+//     }
+
+//     if (!hasLegitInterest) {
+//       candidatesMissing.push({
+//         id: candidate.id,
+//         dateAdded: candidate.dateAdded,
+//       });
+//       console.log(`Candidate ${candidate.id} is missing 'Legitimate Interest' customObject1s.`);
+//     }
+//   }
+
+//   return candidatesMissing;
+// }
 
 async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded) {
   return await makeApiCall(async () => {
@@ -123,7 +160,7 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
     await confirmToContinue();
 
     // 4. Find missing and process
-    const missing = await findCandidatesMissingLegitimateInterest(allRecords);
+    const missing = await findCandidatesMissingLegitimateInterest(allRecords, getShouldStop);
     console.log(`Found ${missing.length} candidates missing 'Legitimate Interest' customObject1s.`);
 
     let processed = 0;

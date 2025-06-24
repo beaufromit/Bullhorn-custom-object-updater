@@ -1,9 +1,12 @@
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const url = require('url');
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import url from 'url';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 //Get new access token using credenials when refresh token fails
 async function getAuthorizationCodeWithCredentials() {
@@ -147,11 +150,10 @@ function updateEnvFile(newValues) {
   console.log('.env file updated with new tokens.');
 }
 
-module.exports = {
+export {
     recoverTokensAndRestToken,
     exchangeCodeForTokens,
     getAuthorizationCodeWithCredentials,
-    exchangeCodeForTokens,
     renewAccessToken,
     getBhRestToken,
   };

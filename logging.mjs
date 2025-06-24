@@ -1,4 +1,4 @@
-const fs = require('fs');
+import fs from 'fs';
 
 // Function to get the current timestamp for filenames
 const getTimestampForFilename = () => {
@@ -38,4 +38,4 @@ const setupLogging = () => {
 };
 
 // Export the setupLogging function
-module.exports = { setupLogging };
+export { setupLogging };

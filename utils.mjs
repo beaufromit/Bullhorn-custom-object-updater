@@ -1,12 +1,16 @@
-require('dotenv').config(); // Load environment variables from .env file
-const axios = require('axios');
-const { renewAccessToken, getBhRestToken, recoverTokensAndRestToken, exchangeCodeForTokens,  } = require('./auth');
-const corpToken = process.env.CORP_TOKEN;
-const readline = require('readline');
+import dotenv from 'dotenv';
+dotenv.config();
+import axios from 'axios';
+import readline from 'readline';
+import { renewAccessToken, recoverTokensAndRestToken, exchangeCodeForTokens } from './auth.mjs';
+export const corpToken = process.env.CORP_TOKEN;
 
 let accessToken = '';
 let refreshToken = process.env.REFRESH_TOKEN;
 let BhRestToken = process.env.BH_REST_TOKEN;
+export function getBhRestToken() {
+  return BhRestToken;
+}
 
 // API caller wrapper for expired token handling
 let consecutive401Errors = 0; // Global counter for consecutive 401 errors, protects against logs filling when all tokens are expired
@@ -57,7 +61,7 @@ async function makeApiCall(apiCallFunction, ...args) {
             const bhRest = await recoverTokensAndRestToken();
 
               // Reload tokens from .env after update
-              require('dotenv').config();
+              dotenv.config();
               BhRestToken = bhRest.BhRestToken;
               accessToken = process.env.ACCESS_TOKEN;
               refreshToken = process.env.REFRESH_TOKEN;
@@ -90,6 +94,7 @@ function getQueryConstants() {
   return {
     recordIsNotDeleted: 'isDeleted:0',
     recordIsNotArchived: '!status:Archive',
+    recordisNotNewLead: '!status:"New Lead"',
     recordIsNotUpdated: '!customText26:yes',
     recordIsNotProcessing: '!customText26:processing',
     recordDateAdded: 'dateAdded:[2025-01-01%20TO%20*]',
@@ -111,8 +116,8 @@ function buildQueryString() {
 function buildLegitimateInterestQueryString() {
   // Example: fetch all candidates (customize as needed)
   // You may want to filter out deleted/archived, but NOT by customText26
-  const { recordIsNotDeleted, recordIsNotArchived, recordDateAdded, AND } = getQueryConstants();
-  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordDateAdded}` // Adjust the query as needed
+  const { recordIsNotDeleted, recordIsNotArchived, recordDateAdded, recordisNotNewLead, AND } = getQueryConstants();
+  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordisNotNewLead}${AND}${recordDateAdded}` // Adjust the query as needed
 }
 
 function buildQueryStringforCVUpdate() {
@@ -249,16 +254,13 @@ function setupGracefulStop() {
   return () => shouldStop;
 }
 
-module.exports = {
+export {
   makeApiCall,
   getQueryConstants,
   buildQueryString,
   buildLegitimateInterestQueryString,
   getAllRecords,
   getAllCustomObjects,
-  corpToken: process.env.CORP_TOKEN,
-  // If you need BhRestToken, export a getter function for it:
-  getBhRestToken: () => BhRestToken,
   getAllCandidatesForCVUpdate,
   getAllFileAttachments,
   confirmToContinue,
