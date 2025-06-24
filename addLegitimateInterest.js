@@ -14,6 +14,7 @@ const {
 const { setupLogging } = require('./logging');
 const axios = require('axios');
 const getShouldStop = setupGracefulStop();
+const chalk = require('chalk').default;
 
 // Custom getAllRecords for this script
 async function getAllCandidatesForLegitimateInterest() {
@@ -97,7 +98,7 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
         'Content-Type': 'application/json'
       }
     });
-    console.log(`Added Legitimate Interest customObject1s for Candidate ${candidateId}.`);
+    console.log(chalk.green(`Added Legitimate Interest customObject1s for Candidate ${candidateId}.`));
   });
 }
 

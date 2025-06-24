@@ -92,6 +92,7 @@ function getQueryConstants() {
     recordIsNotArchived: '!status:Archive',
     recordIsNotUpdated: '!customText26:yes',
     recordIsNotProcessing: '!customText26:processing',
+    recordDateAdded: 'dateAdded:[2025-01-01%20TO%20*]',
     recordOwner: 'owner.id:17',
     id: 'id:165183',
     testCandidate: 'customText37:Yes',
@@ -111,7 +112,7 @@ function buildLegitimateInterestQueryString() {
   // Example: fetch all candidates (customize as needed)
   // You may want to filter out deleted/archived, but NOT by customText26
   const { recordIsNotDeleted, recordIsNotArchived, testCandidate, AND } = getQueryConstants();
-  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${testCandidate}`; // Adjust the query as needed
+  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordDateAdded}` // Adjust the query as needed
 }
 
 function buildQueryStringforCVUpdate() {
