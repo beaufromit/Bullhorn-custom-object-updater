@@ -12,7 +12,7 @@ const {
   confirmToContinue,
   setupGracefulStop
 } = require('./utils');
-const { setupLogging } = require('./logging.mjs');
+const { setupLogging } = require('./logging');
 const axios = require('axios');
 const getShouldStop = setupGracefulStop();
 
