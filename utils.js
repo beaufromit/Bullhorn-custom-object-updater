@@ -8,6 +8,9 @@ let accessToken = '';
 let refreshToken = process.env.REFRESH_TOKEN;
 let BhRestToken = process.env.BH_REST_TOKEN;
 
+let isRefreshing = false;
+let refreshPromise = null;
+
 // API caller wrapper for expired token handling
 let consecutive401Errors = 0; // Global counter for consecutive 401 errors, protects against logs filling when all tokens are expired
 async function makeApiCall(apiCallFunction, ...args) {
@@ -39,35 +42,46 @@ async function makeApiCall(apiCallFunction, ...args) {
         }
 
         try {
-          // Try to renew tokens
-          const tokenData = await renewAccessToken(refreshToken);
-          const bhRestData = await getBhRestToken(tokenData.access_token);
+          // --- Refresh lock logic start ---
+          if (!isRefreshing) {
+            isRefreshing = true;
+            refreshPromise = (async () => {
+              try {
+                const tokenData = await renewAccessToken(refreshToken);
+                const bhRestData = await getBhRestToken(tokenData.access_token);
 
-          // Update global tokens
-          accessToken = tokenData.access_token;
-          refreshToken = tokenData.refresh_token;
-          BhRestToken = bhRestData.BhRestToken;
+                accessToken = tokenData.access_token;
+                refreshToken = tokenData.refresh_token;
+                BhRestToken = bhRestData.BhRestToken;
 
-          console.log('Tokens renewed successfully.');
+                console.log('Tokens renewed successfully.');
+              } catch (tokenError) {
+                console.error('Refresh token failed, attempting full re-auth...');
+                try {
+                  // Full re-auth flow
+                  const bhRest = await recoverTokensAndRestToken();
+
+                  // Reload tokens from .env after update
+                  require('dotenv').config();
+                  BhRestToken = bhRest.BhRestToken;
+                  accessToken = process.env.ACCESS_TOKEN;
+                  refreshToken = process.env.REFRESH_TOKEN;
+                  console.log('Full re-auth successful.');
+                } catch (recoverError) {
+                  console.error('Full re-auth failed:', recoverError.message);
+                  throw recoverError; // Give up if full re-auth also fails
+                }
+              } finally {
+                isRefreshing = false;
+              }
+            })();
+          }
+          await refreshPromise;
+          // --- Refresh lock logic end ---
           continue; // Retry the original request
         } catch (tokenError) {
-          console.error('Refresh token failed, attempting full re-auth...');
-          try {
-            // Full re-auth flow
-            const bhRest = await recoverTokensAndRestToken();
-
-              // Reload tokens from .env after update
-              require('dotenv').config();
-              BhRestToken = bhRest.BhRestToken;
-              accessToken = process.env.ACCESS_TOKEN;
-              refreshToken = process.env.REFRESH_TOKEN;
-            console.log('Full re-auth successful.');
-            continue; // Retry the original request
-          } catch (recoverError) {
-            console.error('Full re-auth failed:', recoverError.message);
-            throw recoverError; // Give up if full re-auth also fails
-  }
-}
+          throw tokenError;
+        }
       } else {
         console.error(`Unhandled error occurred: ${error.message}`);
         throw error; // Re-throw unhandled errors
@@ -85,6 +99,81 @@ async function makeApiCall(apiCallFunction, ...args) {
   }
 }
 
+// async function makeApiCall(apiCallFunction, ...args) {
+//   const maxRetries = 3; // Maximum number of retries for transient errors
+//   let attempt = 0;
+
+//   while (attempt < maxRetries) {
+//     try {
+//       const result = await apiCallFunction(...args);
+//       consecutive401Errors = 0; // Reset the counter on a successful call
+//       return result;
+//     } catch (error) {
+//       attempt++;
+
+//       // Handle specific error types
+//       if (error.code === 'ETIMEDOUT') {
+//         console.warn(`Timeout error occurred. Retrying (${attempt}/${maxRetries})...`);
+//       } else if (error.code === 'EAI_AGAIN') {
+//         console.warn(`DNS resolution error occurred. Retrying (${attempt}/${maxRetries})...`);
+//       } else if (error.code === 'ECONNRESET') {
+//         console.warn(`Connection reset error occurred. Retrying (${attempt}/${maxRetries})...`);
+//       } else if (error.response?.status === 401 || error.response?.data?.error === 'invalid_token') {
+//         console.log('Token expired. Renewing tokens...');
+//         consecutive401Errors++;
+
+//         if (consecutive401Errors >= 3) {
+//           console.error('Too many consecutive 401 errors. Stopping the script.');
+//           process.exit(1); // Exit the script if too many consecutive 401 errors occur
+//         }
+
+//         try {
+//           // Try to renew tokens
+//           const tokenData = await renewAccessToken(refreshToken);
+//           const bhRestData = await getBhRestToken(tokenData.access_token);
+
+//           // Update global tokens
+//           accessToken = tokenData.access_token;
+//           refreshToken = tokenData.refresh_token;
+//           BhRestToken = bhRestData.BhRestToken;
+
+//           console.log('Tokens renewed successfully.');
+//           continue; // Retry the original request
+//         } catch (tokenError) {
+//           console.error('Refresh token failed, attempting full re-auth...');
+//           try {
+//             // Full re-auth flow
+//             const bhRest = await recoverTokensAndRestToken();
+
+//               // Reload tokens from .env after update
+//               require('dotenv').config();
+//               BhRestToken = bhRest.BhRestToken;
+//               accessToken = process.env.ACCESS_TOKEN;
+//               refreshToken = process.env.REFRESH_TOKEN;
+//             console.log('Full re-auth successful.');
+//             continue; // Retry the original request
+//           } catch (recoverError) {
+//             console.error('Full re-auth failed:', recoverError.message);
+//             throw recoverError; // Give up if full re-auth also fails
+//   }
+// }
+//       } else {
+//         console.error(`Unhandled error occurred: ${error.message}`);
+//         throw error; // Re-throw unhandled errors
+//       }
+
+//       // If max retries are reached, log and re-throw the error
+//       if (attempt >= maxRetries) {
+//         console.error(`Max retries reached for error: ${error.message}`);
+//         throw error;
+//       }
+
+//       // Add a delay before retrying (exponential backoff)
+//       await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+//     }
+//   }
+// }
+
 // Function to return query constants
 function getQueryConstants() {
   return {
@@ -92,7 +181,8 @@ function getQueryConstants() {
     recordIsNotArchived: '!status:Archive',
     recordIsNotUpdated: '!customText26:yes',
     recordIsNotProcessing: '!customText26:processing',
-    recordDateAdded: 'dateAdded:[2025-01-01%20TO%20*]',
+    recordIsNotNewLead: '!status:"New Lead"',
+    recordDateAdded: 'dateAdded:[2018-05-25%20TO%20*]',
     recordOwner: 'owner.id:17',
     id: 'id:165183',
     testCandidate: 'customText37:Yes',
@@ -111,8 +201,8 @@ function buildQueryString() {
 function buildLegitimateInterestQueryString() {
   // Example: fetch all candidates (customize as needed)
   // You may want to filter out deleted/archived, but NOT by customText26
-  const { recordIsNotDeleted, recordIsNotArchived, recordDateAdded, AND } = getQueryConstants();
-  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordDateAdded}` // Adjust the query as needed
+  const { recordIsNotDeleted, recordIsNotArchived, recordDateAdded, recordIsNotNewLead, AND } = getQueryConstants();
+  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotNewLead}${AND}${recordDateAdded}` // Adjust the query as needed
 }
 
 function buildQueryStringforCVUpdate() {

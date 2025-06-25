@@ -15,6 +15,7 @@ const { setupLogging } = require('./logging');
 const axios = require('axios');
 const getShouldStop = setupGracefulStop();
 const chalk = require('chalk').default;
+const pLimit = require('p-limit');
 
 // Custom getAllRecords for this script
 async function getAllCandidatesForLegitimateInterest() {
@@ -51,8 +52,9 @@ async function findCandidatesMissingLegitimateInterest() {
   const { allRecords } = await getAllCandidatesForLegitimateInterest();
   const candidatesMissing = [];
 
-   let processedCount = 0;
-  for (const candidate of allRecords) {
+  const limit = pLimit(5);
+  let processedCount = 0;
+   const tasks = allRecords.map(candidate => limit(async () => {
     processedCount++;
     console.log(`Checking candidate ${processedCount} of ${allRecords.length} (ID: ${candidate.id})...`);
 
@@ -76,7 +78,9 @@ async function findCandidatesMissingLegitimateInterest() {
       });
       console.log(`Candidate ${candidate.id} is missing 'Legitimate Interest' customObject1s.`);
     }
-  }
+  }));
+
+  await Promise.all(tasks);
 
   return candidatesMissing;
 }
@@ -129,10 +133,9 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
     let processed = 0;
     let successCount = 0;
     let failCount = 0;
-    for (const candidate of missing) {
+    const tasks = missing.map(candidate => limit(async () => {
       if (getShouldStop()) {
-        console.log('Stopping script after finishing the current record.');
-        break;
+        return;
       }
       processed++;
       console.log(`Adding customObject1s for candidate ${candidate.id} (${processed} of ${missing.length})...`);
@@ -143,7 +146,10 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
         console.error(`Failed to add customObject1s for candidate ${candidate.id}:`, error.response?.data || error.message);
         failCount++;
       }
-    }
+    }));
+
+    await Promise.all(tasks);
+
     console.log(`${processed} missing candidates processed. Success: ${successCount}, Failed: ${failCount}`);
   } catch (error) {
     console.error("Fatal error in addLegitimateInterest:", error.response?.data || error.message);
