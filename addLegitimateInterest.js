@@ -16,6 +16,7 @@ const axios = require('axios');
 const getShouldStop = setupGracefulStop();
 const chalk = require('chalk').default;
 const pLimit = require('p-limit');
+const limit = pLimit(5);
 
 // Custom getAllRecords for this script
 async function getAllCandidatesForLegitimateInterest() {
@@ -48,11 +49,10 @@ async function getAllCandidatesForLegitimateInterest() {
 }
 
 // Function to find all candidates missing a customObject1s with text2 === 'Legitimate Interest'
-async function findCandidatesMissingLegitimateInterest() {
-  const { allRecords } = await getAllCandidatesForLegitimateInterest();
+async function findCandidatesMissingLegitimateInterest(allRecords) {
+  // const { allRecords } = await getAllCandidatesForLegitimateInterest();
   const candidatesMissing = [];
 
-  const limit = pLimit(5);
   let processedCount = 0;
    const tasks = allRecords.map(candidate => limit(async () => {
     processedCount++;
