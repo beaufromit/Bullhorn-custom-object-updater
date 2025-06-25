@@ -33,7 +33,6 @@ async function makeApiCall(apiCallFunction, ...args) {
       } else if (error.code === 'ECONNRESET') {
         console.warn(`Connection reset error occurred. Retrying (${attempt}/${maxRetries})...`);
       } else if (error.response?.status === 401 || error.response?.data?.error === 'invalid_token') {
-        console.log('Token expired. Renewing tokens...');
         consecutive401Errors++;
 
         if (consecutive401Errors >= 3) {
@@ -41,47 +40,45 @@ async function makeApiCall(apiCallFunction, ...args) {
           process.exit(1); // Exit the script if too many consecutive 401 errors occur
         }
 
-        try {
-          // --- Refresh lock logic start ---
-          if (!isRefreshing) {
-            isRefreshing = true;
-            refreshPromise = (async () => {
+        // --- Begin atomic refresh lock ---
+        if (!isRefreshing) {
+          isRefreshing = true;
+          console.log('Token expired. Renewing tokens...');
+          refreshPromise = (async () => {
+            try {
+              const tokenData = await renewAccessToken(refreshToken);
+              const bhRestData = await getBhRestToken(tokenData.access_token);
+
+              accessToken = tokenData.access_token;
+              refreshToken = tokenData.refresh_token;
+              BhRestToken = bhRestData.BhRestToken;
+
+              console.log('Tokens renewed successfully.');
+            } catch (tokenError) {
+              console.error('Refresh token failed, attempting full re-auth...');
               try {
-                const tokenData = await renewAccessToken(refreshToken);
-                const bhRestData = await getBhRestToken(tokenData.access_token);
-
-                accessToken = tokenData.access_token;
-                refreshToken = tokenData.refresh_token;
-                BhRestToken = bhRestData.BhRestToken;
-
-                console.log('Tokens renewed successfully.');
-              } catch (tokenError) {
-                console.error('Refresh token failed, attempting full re-auth...');
-                try {
-                  // Full re-auth flow
-                  const bhRest = await recoverTokensAndRestToken();
-
-                  // Reload tokens from .env after update
-                  require('dotenv').config();
-                  BhRestToken = bhRest.BhRestToken;
-                  accessToken = process.env.ACCESS_TOKEN;
-                  refreshToken = process.env.REFRESH_TOKEN;
-                  console.log('Full re-auth successful.');
-                } catch (recoverError) {
-                  console.error('Full re-auth failed:', recoverError.message);
-                  throw recoverError; // Give up if full re-auth also fails
-                }
-              } finally {
-                isRefreshing = false;
+                const bhRest = await recoverTokensAndRestToken();
+                require('dotenv').config();
+                BhRestToken = bhRest.BhRestToken;
+                accessToken = process.env.ACCESS_TOKEN;
+                refreshToken = process.env.REFRESH_TOKEN;
+                console.log('Full re-auth successful.');
+              } catch (recoverError) {
+                console.error('Full re-auth failed:', recoverError.message);
+                throw recoverError;
               }
-            })();
-          }
-          await refreshPromise;
-          // --- Refresh lock logic end ---
-          continue; // Retry the original request
-        } catch (tokenError) {
-          throw tokenError;
+            } finally {
+              isRefreshing = false;
+            }
+          })();
+        } else {
+          // Only log for the first call that triggers the refresh
+          // Other calls will wait for the refresh to finish
         }
+        await refreshPromise;
+        // --- End atomic refresh lock ---
+
+        continue; // Retry the original request with new token
       } else {
         console.error(`Unhandled error occurred: ${error.message}`);
         throw error; // Re-throw unhandled errors
@@ -98,81 +95,6 @@ async function makeApiCall(apiCallFunction, ...args) {
     }
   }
 }
-
-// async function makeApiCall(apiCallFunction, ...args) {
-//   const maxRetries = 3; // Maximum number of retries for transient errors
-//   let attempt = 0;
-
-//   while (attempt < maxRetries) {
-//     try {
-//       const result = await apiCallFunction(...args);
-//       consecutive401Errors = 0; // Reset the counter on a successful call
-//       return result;
-//     } catch (error) {
-//       attempt++;
-
-//       // Handle specific error types
-//       if (error.code === 'ETIMEDOUT') {
-//         console.warn(`Timeout error occurred. Retrying (${attempt}/${maxRetries})...`);
-//       } else if (error.code === 'EAI_AGAIN') {
-//         console.warn(`DNS resolution error occurred. Retrying (${attempt}/${maxRetries})...`);
-//       } else if (error.code === 'ECONNRESET') {
-//         console.warn(`Connection reset error occurred. Retrying (${attempt}/${maxRetries})...`);
-//       } else if (error.response?.status === 401 || error.response?.data?.error === 'invalid_token') {
-//         console.log('Token expired. Renewing tokens...');
-//         consecutive401Errors++;
-
-//         if (consecutive401Errors >= 3) {
-//           console.error('Too many consecutive 401 errors. Stopping the script.');
-//           process.exit(1); // Exit the script if too many consecutive 401 errors occur
-//         }
-
-//         try {
-//           // Try to renew tokens
-//           const tokenData = await renewAccessToken(refreshToken);
-//           const bhRestData = await getBhRestToken(tokenData.access_token);
-
-//           // Update global tokens
-//           accessToken = tokenData.access_token;
-//           refreshToken = tokenData.refresh_token;
-//           BhRestToken = bhRestData.BhRestToken;
-
-//           console.log('Tokens renewed successfully.');
-//           continue; // Retry the original request
-//         } catch (tokenError) {
-//           console.error('Refresh token failed, attempting full re-auth...');
-//           try {
-//             // Full re-auth flow
-//             const bhRest = await recoverTokensAndRestToken();
-
-//               // Reload tokens from .env after update
-//               require('dotenv').config();
-//               BhRestToken = bhRest.BhRestToken;
-//               accessToken = process.env.ACCESS_TOKEN;
-//               refreshToken = process.env.REFRESH_TOKEN;
-//             console.log('Full re-auth successful.');
-//             continue; // Retry the original request
-//           } catch (recoverError) {
-//             console.error('Full re-auth failed:', recoverError.message);
-//             throw recoverError; // Give up if full re-auth also fails
-//   }
-// }
-//       } else {
-//         console.error(`Unhandled error occurred: ${error.message}`);
-//         throw error; // Re-throw unhandled errors
-//       }
-
-//       // If max retries are reached, log and re-throw the error
-//       if (attempt >= maxRetries) {
-//         console.error(`Max retries reached for error: ${error.message}`);
-//         throw error;
-//       }
-
-//       // Add a delay before retrying (exponential backoff)
-//       await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-//     }
-//   }
-// }
 
 // Function to return query constants
 function getQueryConstants() {

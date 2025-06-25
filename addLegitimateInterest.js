@@ -50,15 +50,17 @@ async function getAllCandidatesForLegitimateInterest() {
 
 // Function to find all candidates missing a customObject1s with text2 === 'Legitimate Interest'
 async function findCandidatesMissingLegitimateInterest(allRecords) {
-  // const { allRecords } = await getAllCandidatesForLegitimateInterest();
   const candidatesMissing = [];
-
   let processedCount = 0;
-   const tasks = allRecords.map(candidate => limit(async () => {
+
+  const tasks = allRecords.map(candidate => limit(async () => {
+    if (getShouldStop()) {
+      return;
+    }
     processedCount++;
     console.log(`Checking candidate ${processedCount} of ${allRecords.length} (ID: ${candidate.id})...`);
 
-    const customObjects = await getAllCustomObjects(candidate.id); // Fetch all customObject1s for this candidate
+    const customObjects = await getAllCustomObjects(candidate.id);
 
     let hasLegitInterest = false;
     if (customObjects && customObjects.length > 0) {
