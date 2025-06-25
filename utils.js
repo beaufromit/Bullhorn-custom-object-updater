@@ -247,6 +247,10 @@ async function getAllCustomObjects(candidateId) {
     const count = 10; // Adjust this to the maximum allowed by the API
 
     while (true) {
+      if (typeof getShouldStop === 'function' && getShouldStop()) {
+        console.log(`Gracefully stopping fetch for Candidate ${candidateId}.`);
+        break;
+      }
       const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}/customObject1s?BhRestToken=${BhRestToken}&fields=id,date1,date2,text2,text3&start=${start}&count=${count}`;
       console.log(`Fetching customObject1s for Candidate ${candidateId}, starting from index ${start}...`);
 
