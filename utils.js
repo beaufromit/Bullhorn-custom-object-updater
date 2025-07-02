@@ -14,7 +14,7 @@ let refreshPromise = null;
 // API caller wrapper for expired token handling
 let consecutive401Errors = 0; // Global counter for consecutive 401 errors, protects against logs filling when all tokens are expired
 async function makeApiCall(apiCallFunction, ...args) {
-  const maxRetries = 3; // Maximum number of retries for transient errors
+  const maxRetries = 6; // Maximum number of retries for transient errors
   let attempt = 0;
 
   while (attempt < maxRetries) {
@@ -23,7 +23,7 @@ async function makeApiCall(apiCallFunction, ...args) {
       consecutive401Errors = 0; // Reset the counter on a successful call
       return result;
     } catch (error) {
-      attempt++;
+      
 
       // Handle specific error types
       if (error.code === 'ETIMEDOUT') {
@@ -36,7 +36,7 @@ async function makeApiCall(apiCallFunction, ...args) {
         console.log('Token expired. Renewing tokens...');
         consecutive401Errors++;
 
-        if (consecutive401Errors >= 3) {
+        if (consecutive401Errors >= 6) {
           console.error('Too many consecutive 401 errors. Stopping the script.');
           process.exit(1); // Exit the script if too many consecutive 401 errors occur
         }
@@ -86,6 +86,7 @@ async function makeApiCall(apiCallFunction, ...args) {
       }
 
       // If max retries are reached, log and re-throw the error
+      attempt++;
       if (attempt >= maxRetries) {
         console.error(`Max retries reached for error: ${error.message}`);
         throw error;
@@ -207,6 +208,14 @@ function buildQueryStringforCVUpdate() {
   const { recordIsNotDeleted, recordIsNotArchived, testCandidate, AND } = getQueryConstants();
   return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${testCandidate}`; // Adjust the query as needed
 }
+
+function buildLegitimateInterestCustomObjectQuery() {
+  // Adjust as needed to filter for candidates with customObject1s
+  // You may need to filter in JS after fetching, as Bullhorn search may not support deep filtering
+  const { recordIsNotDeleted, recordIsNotArchived, AND, testCandidate, id } = getQueryConstants();
+  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${testCandidate}${AND}${id}`;
+}
+
 // Function to fetch all records 
 async function getAllRecords() {
   return await makeApiCall(async () => {
@@ -216,7 +225,7 @@ async function getAllRecords() {
     const queryString = buildQueryString();
 
     while (true) {
-      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${BhRestToken}&query=${queryString}&fields=id,customObject1s(id,date1,date2,text2,text3)&sort=id&start=${start}&count=${count}`;
+      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${getBhRestToken()}&query=${queryString}&fields=id,customObject1s(id,date1,date2,text2,text3)&sort=id&start=${start}&count=${count}`;
       console.log(`Fetching records starting from index ${start}...`);
 
       const response = await axios.get(url);
@@ -346,6 +355,7 @@ module.exports = {
   getQueryConstants,
   buildQueryString,
   buildLegitimateInterestQueryString,
+  buildLegitimateInterestCustomObjectQuery,
   getAllRecords,
   getAllCustomObjects,
   corpToken: process.env.CORP_TOKEN,
