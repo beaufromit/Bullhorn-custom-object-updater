@@ -181,7 +181,8 @@ function getQueryConstants() {
     recordIsNotUpdated: '!customText26:yes',
     recordIsNotProcessing: '!customText26:processing',
     recordIsNotNewLead: '!status:"New Lead"',
-    recordDateAdded: 'dateAdded:[2018-05-25%20TO%20*]',
+    recordDateAdded: 'dateAdded:[20180525%20TO%20*]',
+    // recordDateAdded: 'dateAdded:[2018-05-25%20TO%20*]',
     recordOwner: 'owner.id:17',
     id: 'id:165183',
     testCandidate: 'customText37:Yes',
@@ -212,8 +213,8 @@ function buildQueryStringforCVUpdate() {
 function buildLegitimateInterestCustomObjectQuery() {
   // Adjust as needed to filter for candidates with customObject1s
   // You may need to filter in JS after fetching, as Bullhorn search may not support deep filtering
-  const { recordIsNotDeleted, recordIsNotArchived, AND, testCandidate, id } = getQueryConstants();
-  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${testCandidate}${AND}${id}`;
+  const { recordIsNotDeleted, recordIsNotArchived, AND, recordIsNotNewLead, recordDateAdded} = getQueryConstants();
+  return `${recordIsNotDeleted}${AND}${recordIsNotNewLead}${AND}${recordIsNotArchived}${AND}${recordDateAdded}`;
 }
 
 // Function to fetch all records 

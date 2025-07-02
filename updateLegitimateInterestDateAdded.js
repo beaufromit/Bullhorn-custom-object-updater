@@ -5,7 +5,6 @@ require('dotenv').config();
 const axios = require('axios');
 const corpToken = process.env.CORP_TOKEN;
 const {
-  getAllRecords,
   getAllCustomObjects,
   confirmToContinue,
   setupGracefulStop,
@@ -27,7 +26,7 @@ async function getAllCandidatesWithLegitimateInterestCO() {
 
     while (true) {
       console.log(`Fetching candidates for Legitimate Interest update starting from index ${start}...`);
-      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${getBhRestToken()}&query=${queryString}&fields=id,customObject1s(id,date1,dateAdded,text2)&sort=id&start=${start}&count=${count}`;
+      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?query=${queryString}&fields=id,customObject1s(id,date1,dateAdded,text2)&sort=id&start=${start}&count=${count}&BhRestToken=${getBhRestToken()}`;
       const response = await axios.get(url);
       const records = response.data.data;
 
