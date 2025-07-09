@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "swap-dates": "node index.js",
     "add-legitimate-interest": "node addLegitimateInterest.js",
-    "update-legitimate-interest": "node updateLegitimateInterestInterestDateAdded.js"
+    "update-legitimate-interest": "node updateLegitimateInterestDateAdded.js"
   },
   "keywords": [],
   "author": "",

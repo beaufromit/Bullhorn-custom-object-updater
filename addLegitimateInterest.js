@@ -96,7 +96,8 @@ async function addLegitimateInterestCustomObject(candidateId, candidateDateAdded
         text2: 'Legitimate Interest',
         date1: candidateDateAdded,
         text3: 'Herefish',
-        textBlock1: 'Added by API'
+        textBlock1: 'Added by API',
+        dateAdded: candidateDateAdded
       }]
     };
     await axios.post(url, payload, {
