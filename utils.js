@@ -205,11 +205,6 @@ function buildLegitimateInterestQueryString() {
   return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${recordIsNotNewLead}${AND}${recordDateAdded}` // Adjust the query as needed
 }
 
-function buildQueryStringforCVUpdate() {
-  const { recordIsNotDeleted, recordIsNotArchived, testCandidate, AND } = getQueryConstants();
-  return `${recordIsNotDeleted}${AND}${recordIsNotArchived}${AND}${testCandidate}`; // Adjust the query as needed
-}
-
 function buildLegitimateInterestCustomObjectQuery() {
   // Adjust as needed to filter for candidates with customObject1s
   // You may need to filter in JS after fetching, as Bullhorn search may not support deep filtering
@@ -277,51 +272,6 @@ async function getAllCustomObjects(candidateId) {
   });
 }
 
-// Fetch all candidates matching a query, paginated, with just the fields you need
-async function getAllCandidatesForCVUpdate() {
-  return await makeApiCall(async () => {
-    const allCandidates = [];
-    let start = 0;
-    const count = 200;
-    // You can adjust the query as needed
-    const queryString = buildQueryStringforCVUpdate(); // Or make a new one for your use case
-
-    while (true) {
-      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${getBhRestToken()}&query=${queryString}&fields=id,customDate2&sort=id&start=${start}&count=${count}`;
-      const response = await axios.get(url);
-      const records = response.data.data;
-      if (records && records.length > 0) {
-        allCandidates.push(...records);
-        start += records.length;
-      } else {
-        break;
-      }
-    }
-    return allCandidates;
-  });
-}
-
-// Fetch all file attachments for a candidate
-async function getAllFileAttachments(candidateId) {
-  return await makeApiCall(async () => {
-    const allFiles = [];
-    let start = 0;
-    const count = 100;
-    while (true) {
-      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}/fileAttachments?BhRestToken=${getBhRestToken()}&fields=id,type,dateAdded&start=${start}&count=${count}`;
-      const response = await axios.get(url);
-      const files = response.data.data;
-      if (files && files.length > 0) {
-        allFiles.push(...files);
-        start += files.length;
-      } else {
-        break;
-      }
-    }
-    return allFiles;
-  });
-}
-
 // Function to prompt for confirmation
 async function confirmToContinue() {
   const rl = readline.createInterface({
@@ -362,8 +312,6 @@ module.exports = {
   corpToken: process.env.CORP_TOKEN,
   // If you need BhRestToken, export a getter function for it:
   getBhRestToken: () => BhRestToken,
-  getAllCandidatesForCVUpdate,
-  getAllFileAttachments,
   confirmToContinue,
   setupGracefulStop
 };
