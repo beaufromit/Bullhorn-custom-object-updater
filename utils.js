@@ -188,6 +188,7 @@ function getQueryConstants() {
     testCandidate: 'customText37:Yes',
     AND: '%20AND%20',
     OR: '%20OR%20',
+    noCvAddedDate: '!customDate3:[*%20TO%20*]',
   };
 }
 
