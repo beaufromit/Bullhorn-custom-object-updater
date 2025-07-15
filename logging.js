@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 // Function to get the current timestamp for filenames
 const getTimestampForFilename = () => {
@@ -20,6 +21,26 @@ const errorFileName = `script-errors-${timestampForFilename}.log`;
 const logFile = fs.createWriteStream(logFileName, { flags: 'a' }); // Append mode
 const errorFile = fs.createWriteStream(errorFileName, { flags: 'a' }); // Separate error log (optional)
 
+const logsDir = path.join(__dirname, 'logs');
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir);
+}
+
+
+// Create a write stream for candidate updates log
+const candidateUpdateLogPath = path.join(logsDir, 'candidateUpdated.log');
+const candidateLogStream = fs.createWriteStream(candidateUpdateLogPath, { flags: 'a' });  // append mode
+
+// New function to log candidate customDate3 updates
+function logCandidateUpdate(...args) {
+  const timestamp = `[${getTimestampForLog()}]`;
+  // Combine all arguments into one message string (similar to console.log formatting)
+  const message = args.map(arg => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ');
+  // Write the timestamped message to the candidate updates log file
+  candidateLogStream.write(`${timestamp} ${message}\n`);
+  console.log(timestamp, ...args);
+}
+
 // Define the setupLogging function
 const setupLogging = () => {
   const originalLog = console.log;
@@ -38,4 +59,7 @@ const setupLogging = () => {
 };
 
 // Export the setupLogging function
-module.exports = { setupLogging };
+module.exports = { 
+  setupLogging,
+  logCandidateUpdate,
+};

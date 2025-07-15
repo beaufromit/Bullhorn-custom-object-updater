@@ -5,6 +5,7 @@ const {
     corpToken, 
     getBhRestToken 
 } = require('./utils');
+const { logCandidateUpdate } = require('./logging');
 
 // Helper: Update candidate's customDate3 field
 async function updateCandidateCustomDate3(candidateId, dateValue) {
@@ -14,7 +15,7 @@ async function updateCandidateCustomDate3(candidateId, dateValue) {
     await axios.post(url, payload, {
       headers: { 'Content-Type': 'application/json' }
     });
-    console.log(`Updated Candidate ${candidateId} customDate3 to ${dateValue}`);
+    logCandidateUpdate(`Updated Candidate ${candidateId} customDate3 to ${dateValue}`);
   });
 }
 
@@ -56,4 +57,4 @@ async function pollCandidateEvents() {
 
 // Start polling every 1 minute
 pollCandidateEvents();  // initial run immediately
-setInterval(pollCandidateEvents, 10000);
+setInterval(pollCandidateEvents, 10000); //check for updates every 10 seconds
