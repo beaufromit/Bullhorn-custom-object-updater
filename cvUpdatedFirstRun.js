@@ -2,11 +2,11 @@
 require('dotenv').config();
 const axios = require('axios');
 const pLimit = require('p-limit');
-const { 
-  makeApiCall, 
-  corpToken, 
-  getBhRestToken, 
-  getQueryConstants,  
+const {
+  makeApiCall,
+  corpToken,
+  getBhRestToken,
+  getQueryConstants,
 } = require('./utils');
 const { setupLogging } = require('./logging');
 
@@ -33,9 +33,13 @@ async function fetchAllCandidateIds(queryString) {
   let start = 0;
   const count = 200;
   while (true) {
-    const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${getBhRestToken()}&query=${queryString}&fields=id&start=${start}&count=${count}`;
-    console.log(`Fetching records starting from index ${start}...`);
-    const response = await makeApiCall(async () => await axios.get(url));
+    // const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${getBhRestToken()}&query=${queryString}&fields=id&start=${start}&count=${count}`;
+    // console.log(`Fetching records starting from index ${start}...`);
+    const response = await makeApiCall(async () => {
+      const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/search/Candidate?BhRestToken=${getBhRestToken()}&query=${queryString}&fields=id&start=${start}&count=${count}`;
+      console.log(`Fetching records starting from index ${start}...`);
+      return axios.get(url);
+    });
     const data = response.data.data;
     if (!data || data.length === 0) break;
     allCandidates.push(...data);
@@ -45,8 +49,10 @@ async function fetchAllCandidateIds(queryString) {
 }
 
 async function getMostRecentAttachmentDate(candidateId) {
-  const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}/fileAttachments?BhRestToken=${getBhRestToken()}&fields=id,dateAdded`;
-  const response = await makeApiCall(async () => await axios.get(url));
+  const response = await makeApiCall(async () => {
+    const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}/fileAttachments?BhRestToken=${getBhRestToken()}&fields=id,dateAdded`;
+    return axios.get(url);
+  });
   const files = response.data.data || [];
   if (!files.length) return null;
   const latestFile = files.reduce((a, b) => (a.dateAdded > b.dateAdded ? a : b));
@@ -54,15 +60,16 @@ async function getMostRecentAttachmentDate(candidateId) {
 }
 
 async function updateCustomDate3(candidateId, date) {
-  const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}?BhRestToken=${getBhRestToken()}`;
   const payload = { customDate3: date };
   await makeApiCall(async () => {
+    const url = `https://rest21.bullhornstaffing.com/rest-services/${corpToken}/entity/Candidate/${candidateId}?BhRestToken=${getBhRestToken()}`;
     await axios.post(url, payload, {
       headers: { 'Content-Type': 'application/json' }
     });
     console.log(`Updated Candidate ${candidateId} customDate3 to ${date}`);
   });
 }
+
 
 (async () => {
   console.log(`Fetching candidates with query: ${queryString}`);
