@@ -34,11 +34,11 @@ async function pollCandidateEvents() {
       event.entityName === 'Candidate' &&
       event.entityEventType === 'UPDATED' &&
       event.updatedProperties &&
-      event.updatedProperties.includes('description') || event.updatedProperties.includes('parsedResumeFile')
+      (event.updatedProperties.includes('description') || event.updatedProperties.includes('parsedResumeFile'))
     );
 
       if (relevantEvents.length === 0) {
-        console.log("No candidate description updates found in this poll.");
+        console.log("No candidate description updates or new candidates found in this poll.");
       }
 
       // Process each relevant event
