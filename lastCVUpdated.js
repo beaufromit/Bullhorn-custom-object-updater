@@ -31,11 +31,11 @@ async function pollCandidateEvents() {
 
       // Filter for Candidate UPDATED events where description changed
       const relevantEvents = events.filter(event =>
-        event.entityName === 'Candidate' &&
-        event.entityEventType === 'UPDATED' &&
-        event.updatedProperties &&
-        event.updatedProperties.includes('description')
-      );
+      event.entityName === 'Candidate' &&
+      (event.entityEventType === 'UPDATED' || event.entityEventType === 'INSERTED') &&
+      event.updatedProperties &&
+      event.updatedProperties.includes('description')
+    );
 
       if (relevantEvents.length === 0) {
         console.log("No candidate description updates found in this poll.");
