@@ -8,7 +8,8 @@
     "add-legitimate-interest": "node addLegitimateInterest.js",
     "update-legitimate-interest": "node updateLegitimateInterestDateAdded.js",
     "last-cv-updated": "node lastCVUpdated.js",
-    "last-cv-first-run": "node cvUpdatedFirstRun.js"
+    "last-cv-first-run": "node cvUpdatedFirstRun.js",
+    "onboard-client": "node new-client.js"
   },
   "keywords": [],
   "author": "",

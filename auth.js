@@ -40,6 +40,18 @@ async function getAuthorizationCodeWithCredentials() {
         return code;
       }
       throw new Error('Authorization code not found in redirect URL.');
+    } else if (error.response && error.response.status === 301) {
+      const location = error.response.headers.location;
+      const parsed = url.parse(location, true);
+      const code = parsed.query.code;
+      if (code) {
+        console.log('Authorization code obtained:', code);
+        return code;
+      }
+      throw new Error('Authorization code not found in redirect URL.');
+    } else if (error.response && error.response.status === 200) {
+      console.log('follow link and accept terms:', authUrl);
+      throw new Error('Terms acceptance required at Bullhorn auth page.');
     }
     throw error;
   }
@@ -76,7 +88,9 @@ async function exchangeCodeForTokens(code) {
 
 //Function to refresh access token
 async function renewAccessToken(refreshToken) {
-  const url = `https://auth-emea.bullhornstaffing.com/oauth/token?grant_type=refresh_token&refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}`;
+  const region = (process.env.BH_REGION || 'EMEA').toUpperCase();
+  const authHost = region === 'US' ? 'auth.bullhornstaffing.com' : 'auth-emea.bullhornstaffing.com';
+  const url = `https://${authHost}/oauth/token?grant_type=refresh_token&refresh_token=${refreshToken}&client_id=${clientId}&client_secret=${clientSecret}`;
   try {
     const response = await axios.post(url);
     console.log('Access token renewed:', response.data);
@@ -96,7 +110,9 @@ async function renewAccessToken(refreshToken) {
 
 // Function to get BhRestToken using access token
 async function getBhRestToken(accessToken) {
-  const url = `https://rest-emea.bullhornstaffing.com/rest-services/login?version=2.0&access_token=${accessToken}`;
+  const region = (process.env.BH_REGION || 'EMEA').toUpperCase();
+  const restHost = region === 'US' ? 'rest.bullhornstaffing.com' : 'rest-emea.bullhornstaffing.com';
+  const url = `https://${restHost}/rest-services/login?version=2.0&access_token=${accessToken}`;
   try {
     const response = await axios.get(url);
     console.log('BhRestToken retrieved:', response.data);
